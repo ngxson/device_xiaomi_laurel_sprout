@@ -523,10 +523,6 @@ PRODUCT_PACKAGES += \
 # Inherit the proprietary files
 $(call inherit-product-if-exists, vendor/xiaomi/laurel_sprout/laurel_sprout-vendor.mk)
 
-# Udfps
-PRODUCT_PACKAGES += \
-    UdfpsResources
-
 # Enable updating of APEXes
 $(call inherit-product, $(SRC_TARGET_DIR)/product/updatable_apex.mk)
 OVERRIDE_PRODUCT_COMPRESSED_APEX := false
