@@ -44,8 +44,8 @@ EVO_MAINTAINER := HemantSachdeva
 EVO_BUILD_TYPE := OFFICIAL
 EVO_SUPPORT_URL := https://t.me/EvolutionXLaurel_Sprout
 EVO_DONATE_URL := https://pages.razorpay.com/HemantSachdevaa
-BUILD_USERNAME := Hemant
-BUILD_HOSTNAME := Evolution-X
+BUILD_USERNAME := ngxson
+BUILD_HOSTNAME := ngxson
 
 WITH_GAPPS := true
 TARGET_BOOT_ANIMATION_RES := 720
