@@ -104,7 +104,7 @@ Return<bool> BiometricsFingerprint::isUdfps(uint32_t) {
 }
 
 static void setHBMOn(sp<IXiaomiFingerprint> xiaomiFingerprintService) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
     set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_ON);
     set(FOD_STATUS_PATH, FOD_STATUS_ON);
     xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_FOD);
