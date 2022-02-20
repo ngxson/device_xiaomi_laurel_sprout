@@ -521,6 +521,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     XiaomiParts
 
+# Fix Gapps permissions
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/pix3lify-permissions.xml:$(TARGET_OUT)/system/system_ext/etc/permissions/pix3lify-permissions.xml
+
 # Inherit the proprietary files
 $(call inherit-product-if-exists, vendor/xiaomi/laurel_sprout/laurel_sprout-vendor.mk)
 
