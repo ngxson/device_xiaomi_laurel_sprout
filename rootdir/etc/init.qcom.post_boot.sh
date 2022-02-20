@@ -5763,3 +5763,9 @@ esac
 misc_link=$(ls -l /dev/block/bootdevice/by-name/misc)
 real_path=${misc_link##*>}
 setprop persist.vendor.mmi.misc_dev_path $real_path
+
+# Android 12: fix laggy UI by using ondemand governor for little cores
+echo "ondemand" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ondemand
+echo "ondemand" > /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor ondemand
+echo "ondemand" > /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor ondemand
+echo "ondemand" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor ondemand
