@@ -41,6 +41,11 @@
 #define FOD_STATUS_ON 1
 #define FOD_STATUS_OFF 0
 
+#define FOD_UI_PATH "/sys/devices/platform/soc/soc:qcom,dsi-display/fod_ui"
+#define FOD_DIM_PATH "/sys/devices/platform/soc/soc:qcom,dsi-display/dimlayer_hbm"
+#define FOD_DIM_ON 1
+#define FOD_DIM_OFF 0
+
 namespace android {
 namespace hardware {
 namespace biometrics {
@@ -52,18 +57,6 @@ template <typename T>
 static void set(const std::string& path, const T& value) {
     std::ofstream file(path);
     file << value;
-}
-
-static void setHBMOn(sp<IXiaomiFingerprint> xiaomiFingerprintService) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_ON);
-    xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_FOD);
-}
-
-static void setHBMOff(sp<IXiaomiFingerprint> xiaomiFingerprintService) {
-    xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_NONE);
-    set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_OFF);
-    set(FOD_STATUS_PATH, FOD_STATUS_OFF);
 }
 
 BiometricsFingerprint::BiometricsFingerprint() {
@@ -84,7 +77,6 @@ Return<RequestStatus> BiometricsFingerprint::enroll(const hidl_array<uint8_t, 69
 }
 
 Return<RequestStatus> BiometricsFingerprint::postEnroll() {
-    setHBMOff(xiaomiFingerprintService);
     return biometrics_2_1_service->postEnroll();
 }
 
@@ -93,7 +85,6 @@ Return<uint64_t> BiometricsFingerprint::getAuthenticatorId() {
 }
 
 Return<RequestStatus> BiometricsFingerprint::cancel() {
-    setHBMOff(xiaomiFingerprintService);
     return biometrics_2_1_service->cancel();
 }
 
@@ -102,7 +93,6 @@ Return<RequestStatus> BiometricsFingerprint::enumerate() {
 }
 
 Return<RequestStatus> BiometricsFingerprint::remove(uint32_t gid, uint32_t fid) {
-    setHBMOff(xiaomiFingerprintService);
     return biometrics_2_1_service->remove(gid, fid);
 }
 
@@ -119,14 +109,24 @@ Return<bool> BiometricsFingerprint::isUdfps(uint32_t) {
 }
 
 Return<void> BiometricsFingerprint::onFingerDown(uint32_t, uint32_t, float, float) {
-    std::thread mThread (setHBMOn, xiaomiFingerprintService);
     set(FOD_STATUS_PATH, FOD_STATUS_ON);
-    mThread.detach();
+    set(FOD_DIM_PATH, FOD_DIM_ON);
+    std::thread([this]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_ON);
+        xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_FOD);
+    }).detach();
     return Void();
 }
 
 Return<void> BiometricsFingerprint::onFingerUp() {
-    setHBMOff(xiaomiFingerprintService);
+    set(FOD_STATUS_PATH, FOD_STATUS_OFF);
+    set(FOD_DIM_PATH, FOD_DIM_OFF);
+    std::thread([this]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_OFF);
+        xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_NONE);
+    }).detach();
     return Void();
 }
 
