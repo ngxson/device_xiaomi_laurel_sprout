@@ -15,6 +15,7 @@
  */
 
 #define LOG_TAG "android.hardware.biometrics.fingerprint@2.3-service.laurel_sprout"
+#define LOG_VERBOSE "android.hardware.biometrics.fingerprint@2.3-service.laurel_sprout"
 
 #include "BiometricsFingerprint.h"
 
@@ -23,9 +24,17 @@
 #include <thread>
 #include <chrono>
 
+#include <log/log.h>
+#include <android/log.h>
 #include <android-base/logging.h>
+#include <android-base/strings.h>
+#include <cutils/properties.h>
 #include <fstream>
 #include <cmath>
+#include <inttypes.h>
+#include <poll.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #define FINGERPRINT_ERROR_VENDOR 8
 
@@ -59,9 +68,54 @@ static void set(const std::string& path, const T& value) {
     file << value;
 }
 
+static int readFile(int fd) {
+    char c;
+    int rc;
+
+    rc = lseek(fd, 0, SEEK_SET);
+    if (rc) {
+        ALOGE("failed to seek fd, err: %d", rc);
+        return -1;
+    }
+
+    rc = read(fd, &c, sizeof(char));
+    if (rc != 1) {
+        ALOGE("failed to read bool from fd, err: %d", rc);
+        return -1;
+    }
+
+    return c != '0' ? 1 : 0;
+}
+
 BiometricsFingerprint::BiometricsFingerprint() {
     biometrics_2_1_service = IBiometricsFingerprint_2_1::getService();
     xiaomiFingerprintService = IXiaomiFingerprint::getService();
+
+    std::thread([this]() {
+        int fd = open(FOD_UI_PATH, O_RDONLY);
+        if (fd < 0) {
+            ALOGE("failed to open fd, err: %d", fd);
+            return;
+        }
+
+        struct pollfd fodUiPoll = {
+            .fd = fd,
+            .events = POLLERR | POLLPRI,
+            .revents = 0,
+        };
+
+        while (true) {
+            int rc = poll(&fodUiPoll, 1, -1);
+            if (rc < 0) {
+                ALOGE("failed to poll fd, err: %d", rc);
+                continue;
+            }
+
+            if (readFile(fd) == 0) {
+                xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_NONE);
+            }
+        }
+    }).detach();
 }
 
 Return<uint64_t> BiometricsFingerprint::setNotify(const sp<IBiometricsFingerprintClientCallback>& clientCallback) {
@@ -114,6 +168,7 @@ Return<void> BiometricsFingerprint::onFingerDown(uint32_t, uint32_t, float, floa
     std::thread([this]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_ON);
+        std::this_thread::sleep_for(std::chrono::milliseconds(40));
         xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_FOD);
     }).detach();
     return Void();
@@ -125,6 +180,7 @@ Return<void> BiometricsFingerprint::onFingerUp() {
     std::thread([this]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         set(DISPPARAM_PATH, DISPPARAM_HBM_FOD_OFF);
+        std::this_thread::sleep_for(std::chrono::milliseconds(40));
         xiaomiFingerprintService->extCmd(COMMAND_NIT, PARAM_NIT_NONE);
     }).detach();
     return Void();
